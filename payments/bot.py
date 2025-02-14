@@ -5,11 +5,7 @@ from django.conf import settings
 from payments.models import TelegramUser, Transaction
 import os
 
-TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-CHANNEL_USERNAME = "@your_channel"
-MPESA_CONSUMER_KEY = "YOUR_MPESA_CONSUMER_KEY"
-MPESA_CONSUMER_SECRET = "YOUR_MPESA_CONSUMER_SECRET"
-MPESA_SHORTCODE = "YOUR_MPESA_SHORTCODE"
+
 
 bot = Bot(token=TOKEN)
 
