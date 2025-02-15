@@ -4,23 +4,24 @@ import requests
 from django.conf import settings
 from payments.models import TelegramUser, Transaction
 import os
+from bot_project.config import (
+    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHANNEL_USERNAME,
+    MPESA_CONSUMER_KEY,
+    MPESA_CONSUMER_SECRET,
+    MPESA_SHORTCODE,
+    MPESA_AUTH,
+    MPESA_CALLBACK_URL
+)
 
-TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-CHANNEL_USERNAME = "@your_channel"
-MPESA_CONSUMER_KEY = "YOUR_MPESA_CONSUMER_KEY"
-MPESA_CONSUMER_SECRET = "YOUR_MPESA_CONSUMER_SECRET"
-MPESA_SHORTCODE = "YOUR_MPESA_SHORTCODE"
-
-bot = Bot(token=TOKEN)
-
+bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
 # Check if user has joined the channel
 def check_subscription(user_id):
-    url = f"https://api.telegram.org/bot{TOKEN}/getChatMember?chat_id={CHANNEL_USERNAME}&user_id={user_id}"
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getChatMember?chat_id={TELEGRAM_CHANNEL_USERNAME}&user_id={user_id}"
     response = requests.get(url).json()
     status = response.get("result", {}).get("status")
     return status in ["member", "administrator", "creator"]
-
 
 # Command: /start
 def start(update: Update, context: CallbackContext):
@@ -30,11 +31,10 @@ def start(update: Update, context: CallbackContext):
     user, created = TelegramUser.objects.get_or_create(user_id=user_id, defaults={"username": username})
 
     if not check_subscription(user_id):
-        update.message.reply_text(f"🚨 You must join {CHANNEL_USERNAME} before making a payment.")
+        update.message.reply_text(f"🚨 You must join {TELEGRAM_CHANNEL_USERNAME} before making a payment.")
         return
 
     update.message.reply_text("✅ Welcome! Use /pay <phone_number> <amount> to make a payment.")
-
 
 # Command: /pay <phone_number> <amount>
 def pay(update: Update, context: CallbackContext):
@@ -66,7 +66,7 @@ def pay(update: Update, context: CallbackContext):
         "PartyA": phone,
         "PartyB": MPESA_SHORTCODE,
         "PhoneNumber": phone,
-        "CallBackURL": "https://yourdomain.com/mpesa/callback",
+        "CallBackURL": MPESA_CALLBACK_URL,
         "AccountReference": "Subscription",
         "TransactionDesc": "Subscription Payment"
     }
@@ -77,23 +77,20 @@ def pay(update: Update, context: CallbackContext):
 
     update.message.reply_text(f"✅ Payment request sent to {phone}. Approve on your phone!")
 
-
 # Get M-Pesa Access Token
 def get_mpesa_access_token():
     url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
-    headers = {"Authorization": f"Basic {os.getenv('MPESA_AUTH')}"}
+    headers = {"Authorization": f"Basic {MPESA_AUTH}"}
     response = requests.get(url, headers=headers)
     return response.json().get("access_token")
 
-
 def main():
-    updater = Updater(TOKEN, use_context=True)
+    updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True)
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("pay", pay))
     updater.start_polling()
     updater.idle()
-
 
 if __name__ == "__main__":
     main()
