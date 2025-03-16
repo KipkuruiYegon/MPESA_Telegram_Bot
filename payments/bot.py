@@ -11,6 +11,7 @@ from payments.models import TelegramUser, Transaction
 from bot_project.config import (
     TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHANNEL_USERNAME,
+    TELEGRAM_CHANNEL_ID,
     MPESA_CONSUMER_KEY,
     MPESA_CONSUMER_SECRET,
     MPESA_SHORTCODE,
