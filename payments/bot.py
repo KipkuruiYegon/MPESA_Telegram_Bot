@@ -24,16 +24,16 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
 
-# Check if user is subscribed to the channel
+# ✅ 1. Check if user is subscribed
 async def check_subscription(user_id):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getChatMember?chat_id={TELEGRAM_CHANNEL_ID}&user_id={user_id}"
     response = requests.get(url).json()
+    print(response)  # Debugging output
     status = response.get("result", {}).get("status")
     return status in ["member", "administrator", "creator"]
 
 
-
-# Generate M-Pesa Access Token
+# ✅ 2. Generate M-Pesa Access Token
 def get_mpesa_access_token():
     credentials = f"{MPESA_CONSUMER_KEY}:{MPESA_CONSUMER_SECRET}"
     encoded_credentials = base64.b64encode(credentials.encode()).decode()
@@ -48,14 +48,25 @@ def get_mpesa_access_token():
         return None
 
 
-# Generate Password and Timestamp for STK Push
+# ✅ 3. Generate Password and Timestamp for STK Push
 def generate_password():
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     password = f"{MPESA_SHORTCODE}{MPESA_PASSKEY}{timestamp}".encode()
     return base64.b64encode(password).decode(), timestamp
 
 
-# Start Command Handler
+# ✅ 4. Grant Telegram access after payment
+async def grant_access(user_id):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/inviteChatMember"
+    payload = {
+        "chat_id": TELEGRAM_CHANNEL_ID,
+        "user_id": user_id
+    }
+    response = requests.post(url, json=payload).json()
+    logging.info(f"Grant access response: {response}")
+
+
+# ✅ 5. Start Command Handler
 async def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     username = update.message.from_user.username
@@ -69,7 +80,7 @@ async def start(update: Update, context: CallbackContext):
     await update.message.reply_text("✅ Welcome! Use /pay <phone_number> <amount> to make a payment.")
 
 
-# Payment Command Handler
+# ✅ 6. Payment Command Handler
 async def pay(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     if not await check_subscription(user_id):
@@ -134,7 +145,7 @@ async def pay(update: Update, context: CallbackContext):
         await update.message.reply_text("❌ Payment request failed. Try again later.")
 
 
-# Payment Status Checker
+# ✅ 7. Payment Status Checker
 async def status(update: Update, context: CallbackContext):
     args = context.args
     if len(args) != 1:
@@ -154,7 +165,7 @@ async def status(update: Update, context: CallbackContext):
         await update.message.reply_text("❌ Transaction not found.")
 
 
-# M-Pesa Callback Handling
+# ✅ 8. M-Pesa Callback Handling
 @csrf_exempt
 def mpesa_callback(request):
     data = request.json()
@@ -164,7 +175,6 @@ def mpesa_callback(request):
         body = data.get("Body", {}).get("stkCallback", {})
         result_code = body.get("ResultCode")
         transaction_id = body.get("CheckoutRequestID")
-        metadata = body.get("CallbackMetadata", {}).get("Item", [])
 
         # Find transaction
         transaction = Transaction.objects.get(transaction_id=transaction_id)
@@ -172,6 +182,10 @@ def mpesa_callback(request):
         if result_code == 0:
             transaction.is_paid = True
             transaction.save()
+
+            # Grant Telegram access
+            bot.loop.run_until_complete(grant_access(transaction.user.user_id))
+
             message = f"✅ Payment Successful!\n" \
                       f"💰 Amount: {transaction.amount}\n" \
                       f"📱 Phone: {transaction.phone_number}"
@@ -186,7 +200,7 @@ def mpesa_callback(request):
         return JsonResponse({"status": "error"}, status=500)
 
 
-# Main Function
+# ✅ 9. Main Function
 async def main():
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
