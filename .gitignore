@@ -1,2 +1,3 @@
 .env
-config.py
+payments/config.py
+payments/config.py
