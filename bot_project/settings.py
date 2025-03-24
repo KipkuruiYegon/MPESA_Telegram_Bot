@@ -121,3 +121,23 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Telegram Bot Token
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+
+# M-Pesa API Credentials
+MPESA_CONSUMER_KEY = os.getenv("MPESA_CONSUMER_KEY")
+MPESA_CONSUMER_SECRET = os.getenv("MPESA_CONSUMER_SECRET")
+MPESA_SHORTCODE = os.getenv("MPESA_SHORTCODE")
+MPESA_PASSWORD = os.getenv("MPESA_PASSWORD")
+MPESA_LIPA_NA_MPESA_PASSKEY = os.getenv("MPESA_LIPA_NA_MPESA_PASSKEY")
+
+# Base URL for callbacks
+BASE_URL = os.getenv("BASE_URL")
