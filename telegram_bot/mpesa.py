@@ -6,7 +6,6 @@ from django.conf import settings
 # M-Pesa API URL for STK Push
 MPESA_API_URL = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
 
-
 # Function to get M-Pesa OAuth token
 def get_mpesa_token():
     url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
@@ -17,7 +16,6 @@ def get_mpesa_token():
     response = requests.get(url, headers=headers)
     token = response.json().get('access_token')
     return token
-
 
 # Function to initiate STK Push payment request
 def initiate_mpesa_payment(phone_number, amount):
@@ -41,9 +39,9 @@ def initiate_mpesa_payment(phone_number, amount):
         "PartyA": phone_number,  # Customer's phone number
         "PartyB": settings.MPESA_SHORTCODE,
         "PhoneNumber": phone_number,
-        "CallBackURL": f"{settings.BASE_URL}/mpesa/payment_callback/",  # Your callback URL
+        "CallBackURL": f"{settings.MPESA_CALLBACK_URL}",  # Your callback URL
         "AccountReference": "MealPlan1234",
-        "TransactionDesc": "Payment for meal plan subscription"
+        
     }
 
     # Send POST request to initiate STK Push

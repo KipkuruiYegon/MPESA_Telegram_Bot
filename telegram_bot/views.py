@@ -2,17 +2,19 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from telegram import Bot, Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from django.conf import settings
-from .mpesa import initiate_mpesa_payment
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from .mpesa import initiate_mpesa_payment  # Make sure this method exists and does not cause circular imports
 
 # Initialize the Telegram Bot with the token from settings
 bot = Bot(token=settings.TELEGRAM_TOKEN)
-dispatcher = Application.builder().token(settings.TELEGRAM_TOKEN).build()
+
+# Initialize the Application correctly using Application.builder
+application = Application.builder().token(settings.TELEGRAM_TOKEN).build()
 
 # Command to start the bot and show options to the user
-def start(update, context):
-    update.message.reply_text(
+async def start(update, context):
+    await update.message.reply_text(
         "Hello and welcome to [Your Fitness Brand] Meal Plans! 🌟\n\n"
         "I’m here to help you find the perfect meal plan to match your fitness goals. Please choose one of the following plans by typing the corresponding number:\n"
         "1. Weight Loss Plan\n"
@@ -22,10 +24,10 @@ def start(update, context):
     )
 
 # Handle message for meal plan selection
-def handle_message(update, context):
+async def handle_message(update, context):
     text = update.message.text.lower()
     if text == "1":
-        update.message.reply_text(
+        await update.message.reply_text(
             "You’ve selected the **Weight Loss Plan**! 🎯\n\n"
             "This plan includes:\n"
             "- 7 days of calorie-controlled meals.\n"
@@ -35,40 +37,45 @@ def handle_message(update, context):
             "To proceed with payment, please input your **Safaricom phone number** (the number associated with your M-Pesa account)."
         )
     elif text == "2":
-        update.message.reply_text("Selected Muscle Gain Plan!")
+        await update.message.reply_text("Selected Muscle Gain Plan!")
     elif text == "3":
-        update.message.reply_text("Selected Balanced Diet Plan!")
+        await update.message.reply_text("Selected Balanced Diet Plan!")
     else:
-        update.message.reply_text("Please choose a valid plan: 1, 2, or 3.")
+        await update.message.reply_text("Please choose a valid plan: 1, 2, or 3.")
 
 # Payment initiation (after Safaricom number input)
-def payment(update, context):
+async def payment(update, context):
     phone_number = update.message.text
     # Call M-Pesa API to initiate STK Push with phone_number
     payment_status = initiate_mpesa_payment(phone_number, amount=1)  # Adjust amount as needed
 
     if payment_status.get("error"):
-        update.message.reply_text(f"Payment failed: {payment_status['error']}")
+        await update.message.reply_text(f"Payment failed: {payment_status['error']}")
     else:
-        update.message.reply_text("Payment successful! Here's your plan:\n[Meal Plan PDF] [Link to VIP Channel]")
+        await update.message.reply_text("Payment successful! Here's your plan:\n[Meal Plan PDF] [Link to VIP Channel]")
 
 # Webhook view to receive messages from Telegram
 @csrf_exempt
-def webhook(request):
+async def webhook(request):
     if request.method == "POST":
         json_str = request.body.decode("UTF-8")
-        update = Update.de_json(json_str, bot)
-        dispatcher.process_update(update)
-        return JsonResponse({"status": "ok"})
+        try:
+            update_data = json.loads(json_str)
+            update = Update.de_json(update_data, bot)  # Ensure 'bot' is defined
+            await application.process_update(update)  # Use 'application' to process the update
+            return JsonResponse({"status": "ok"})
+        except Exception as e:
+            print(f"Error processing update: {e}")
+            return JsonResponse({"status": "failed", "message": str(e)}, status=400)
     else:
         return JsonResponse({"status": "failed"}, status=400)
 
 # M-Pesa Payment Callback
 @csrf_exempt
-def payment_callback(request):
+async def payment_callback(request):
+    print("Received callback request:", request.body)  # Debugging line
     if request.method == "POST":
         try:
-            # Parse M-Pesa callback data
             response_data = json.loads(request.body.decode('utf-8'))
             transaction_status = response_data.get('Body', {}).get('stkCallback', {}).get('ResultCode')
 
@@ -76,9 +83,7 @@ def payment_callback(request):
                 phone_number = response_data.get('Body', {}).get('stkCallback', {}).get('CallbackMetadata', {}).get('Item', [{}])[0].get('Value')
                 amount = response_data.get('Body', {}).get('stkCallback', {}).get('CallbackMetadata', {}).get('Item', [{}])[1].get('Value')
 
-                # Process successful payment here
                 update_user_payment_status(phone_number, amount)
-
                 return JsonResponse({"status": "success", "message": "Payment confirmed."})
             else:
                 return JsonResponse({"status": "failed", "message": "Payment failed."})
@@ -88,6 +93,18 @@ def payment_callback(request):
 
     return JsonResponse({"status": "failed", "message": "Invalid request."}, status=400)
 
-# Function to update user payment status (you can integrate this with your database)
 def update_user_payment_status(phone_number, amount):
     pass  # Implement logic to update the user's status in the database
+
+# Initialize bot commands
+async def initialize_bot():
+    # Add the handler for /start and message handling
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT, handle_message))
+
+    # Set webhook for the Telegram bot
+    await bot.set_webhook(url="https://6954-105-163-2-235.ngrok-free.app/telegram/webhook/")
+
+# Run the bot asynchronously
+if __name__ == '__main__':
+    initialize_bot()  # Make sure to initialize your bot properly

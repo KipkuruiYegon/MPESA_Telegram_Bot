@@ -25,12 +25,14 @@ SECRET_KEY = 'django-insecure-e%75&h#qn2l3e99+ts5*f52hv6be!6lm&fmg%bgne9(rrjq#%e
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '50d8-105-163-157-32.ngrok-free.app']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'telegram_bot',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,6 +49,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'bot_project.urls'
@@ -141,3 +144,5 @@ MPESA_LIPA_NA_MPESA_PASSKEY = os.getenv("MPESA_LIPA_NA_MPESA_PASSKEY")
 
 # Base URL for callbacks
 BASE_URL = os.getenv("BASE_URL")
+
+
