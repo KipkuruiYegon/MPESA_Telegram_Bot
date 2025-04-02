@@ -38,10 +38,10 @@ def initiate_mpesa_payment(phone_number, amount):
         "Amount": amount,
         "PartyA": phone_number,  # Customer's phone number
         "PartyB": settings.MPESA_SHORTCODE,
-        "PhoneNumber": phone_number,
+        "PhoneNumber": +254712938094,
         "CallBackURL": f"{settings.MPESA_CALLBACK_URL}",  # Your callback URL
         "AccountReference": "MealPlan1234",
-        
+        "TransactionDesc": "Payment for meal plan subscription"
     }
 
     # Send POST request to initiate STK Push
